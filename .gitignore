@@ -28,6 +28,7 @@ autom4te.cache
 aclocal.m4
 INSTALL
 gst-libav.spec
+test-driver
 -
 m4/libtool.m4
 m4/ltoptions.m4
