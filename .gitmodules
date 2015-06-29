@@ -3,4 +3,4 @@
         url = git://anongit.freedesktop.org/gstreamer/common
 [submodule "gst-libs/ext/libav"]
 	path = gst-libs/ext/libav
-	url = git://git.libav.org/libav.git
+	url = git@github.com:pexip/libav.git
