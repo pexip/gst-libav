@@ -20,7 +20,8 @@ check_PROGRAMS = \
 	generic/plugin-test \
 	generic/libavcodec-locking \
 	elements/avdec_adpcm \
-	elements/avdemux_ape
+	elements/avdemux_ape \
+	elements/avvid
 
 VALGRIND_TO_FIX = \
 	generic/plugin-test \
@@ -35,7 +36,7 @@ noinst_PROGRAMS =
 AM_CFLAGS = $(GST_OBJ_CFLAGS) $(GST_CHECK_CFLAGS) $(CHECK_CFLAGS) \
 	$(GST_OPTION_CFLAGS) -DGST_TEST_FILES_PATH="\"$(TEST_FILES_DIRECTORY)\""
 
-LDADD = $(GST_OBJ_LIBS) $(GST_CHECK_LIBS) $(CHECK_LIBS)
+LDADD = $(GST_OBJ_LIBS) $(GST_CHECK_LIBS) $(CHECK_LIBS) -lgstvideo-$(GST_API_VERSION)
 
 # valgrind testing
 VALGRIND_TESTS_DISABLE = $(VALGRIND_TO_FIX)

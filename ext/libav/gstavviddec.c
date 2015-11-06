@@ -1385,6 +1385,14 @@ gst_ffmpegviddec_video_frame (GstFFMpegVidDec * ffmpegdec,
     g_list_free (ol);
   }
 
+  if (out_dframe->mapped) {
+    /* Write access not needed anymore. */
+    GstVideoInfo *info = &ffmpegdec->output_state->info;
+    gst_video_frame_unmap (&out_dframe->vframe);
+    gst_video_frame_map (&out_dframe->vframe, info, out_frame->output_buffer,
+        GST_MAP_READ);
+  }
+
   *ret =
       gst_video_decoder_finish_frame (GST_VIDEO_DECODER (ffmpegdec), out_frame);
 
