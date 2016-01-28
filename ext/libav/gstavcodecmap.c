@@ -3120,6 +3120,11 @@ gst_ffmpeg_caps_with_codecid (enum AVCodecID codec_id,
     }
     case AV_CODEC_ID_H263P:
     {
+#if 0
+      /* Hack: Don't enable annexes unless explicitly stated in 'flags' in
+       * order to improve interop. Decoders do often not signal their
+       * capabilities hence it usually leads to trouble to enable them. */
+
       gboolean val;
 
       if (!gst_structure_get_boolean (str, "annex-f", &val) || val)
@@ -3135,6 +3140,7 @@ gst_ffmpeg_caps_with_codecid (enum AVCodecID codec_id,
         context->flags |= CODEC_FLAG_LOOP_FILTER;
       else
         context->flags &= ~CODEC_FLAG_LOOP_FILTER;
+#endif
       break;
     }
     case AV_CODEC_ID_ADPCM_G726:
