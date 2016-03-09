@@ -46,6 +46,7 @@
 #define DEFAULT_DEBUG_MV		FALSE
 #define DEFAULT_MAX_THREADS		0
 #define DEFAULT_OUTPUT_CORRUPT		TRUE
+#define DEFAULT_REQUIRE_KEYFRAME	FALSE
 #define REQUIRED_POOL_MAX_BUFFERS       32
 #define DEFAULT_STRIDE_ALIGN            31
 #define DEFAULT_ALLOC_PARAM             { 0, DEFAULT_STRIDE_ALIGN, 0, 0, }
@@ -59,6 +60,7 @@ enum
   PROP_DEBUG_MV,
   PROP_MAX_THREADS,
   PROP_OUTPUT_CORRUPT,
+  PROP_REQUIRE_KEYFRAME,
   PROP_LAST
 };
 
@@ -235,6 +237,10 @@ gst_ffmpegviddec_class_init (GstFFMpegVidDecClass * klass)
       g_param_spec_boolean ("output-corrupt", "Output corrupt buffers",
           "Whether libav should output frames even if corrupted",
           DEFAULT_OUTPUT_CORRUPT, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_REQUIRE_KEYFRAME,
+      g_param_spec_boolean ("require-keyframe", "Require keyframe",
+          "Whether the first frame is required to be a keyframe",
+          DEFAULT_REQUIRE_KEYFRAME, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   caps = klass->in_plugin->capabilities;
   if (caps & (CODEC_CAP_FRAME_THREADS | CODEC_CAP_SLICE_THREADS)) {
@@ -272,6 +278,7 @@ gst_ffmpegviddec_init (GstFFMpegVidDec * ffmpegdec)
   ffmpegdec->debug_mv = DEFAULT_DEBUG_MV;
   ffmpegdec->max_threads = DEFAULT_MAX_THREADS;
   ffmpegdec->output_corrupt = DEFAULT_OUTPUT_CORRUPT;
+  ffmpegdec->require_keyframe = DEFAULT_REQUIRE_KEYFRAME;
 
   GST_PAD_SET_ACCEPT_TEMPLATE (GST_VIDEO_DECODER_SINK_PAD (ffmpegdec));
   gst_video_decoder_set_use_default_pad_acceptcaps (GST_VIDEO_DECODER_CAST
@@ -1670,7 +1677,25 @@ gst_ffmpegviddec_video_frame (GstFFMpegVidDec * ffmpegdec,
     g_list_free (ol);
   }
 
+  if (ffmpegdec->picture->key_frame ||
+      ffmpegdec->picture->pict_type == AV_PICTURE_TYPE_I)
+    GST_VIDEO_CODEC_FRAME_SET_SYNC_POINT (out_frame);
+  else
+    GST_VIDEO_CODEC_FRAME_UNSET_SYNC_POINT (out_frame);
+
+  GST_LOG_OBJECT (ffmpegdec, "out_frame: pict_type %d, key_frame %d -> sync %d",
+      ffmpegdec->picture->pict_type, ffmpegdec->picture->key_frame,
+      GST_VIDEO_CODEC_FRAME_IS_SYNC_POINT (out_frame));
+
   av_frame_unref (ffmpegdec->picture);
+
+  if (ffmpegdec->requiring_keyframe) {
+    if (GST_VIDEO_CODEC_FRAME_IS_SYNC_POINT (out_frame))
+      ffmpegdec->requiring_keyframe = FALSE;
+    else
+      gst_video_decoder_report_decode_error (GST_VIDEO_DECODER_CAST (ffmpegdec),
+          out_frame->pts, GST_VIDEO_DECODER_BITSTREAM_FAULT);
+  }
 
   /* FIXME: Ideally we would remap the buffer read-only now before pushing but
    * libav might still have a reference to it!
@@ -1918,6 +1943,8 @@ gst_ffmpegviddec_start (GstVideoDecoder * decoder)
   }
   ffmpegdec->context->opaque = ffmpegdec;
   GST_OBJECT_UNLOCK (ffmpegdec);
+
+  ffmpegdec->requiring_keyframe = ffmpegdec->require_keyframe;
 
   return TRUE;
 }
@@ -2179,6 +2206,9 @@ gst_ffmpegviddec_set_property (GObject * object,
     case PROP_OUTPUT_CORRUPT:
       ffmpegdec->output_corrupt = g_value_get_boolean (value);
       break;
+    case PROP_REQUIRE_KEYFRAME:
+      ffmpegdec->require_keyframe = g_value_get_boolean (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -2209,6 +2239,9 @@ gst_ffmpegviddec_get_property (GObject * object,
       break;
     case PROP_OUTPUT_CORRUPT:
       g_value_set_boolean (value, ffmpegdec->output_corrupt);
+      break;
+    case PROP_REQUIRE_KEYFRAME:
+      g_value_set_boolean (value, ffmpegdec->require_keyframe);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
