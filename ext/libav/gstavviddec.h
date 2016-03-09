@@ -66,8 +66,10 @@ struct _GstFFMpegVidDec
   gboolean debug_mv;
   int max_threads;
   gboolean output_corrupt;
+  gboolean require_keyframe;
 
   GstCaps *last_caps;
+  gboolean requiring_keyframe;
 
   /* Internally used for direct rendering */
   GstBufferPool *internal_pool;
