@@ -1667,6 +1667,7 @@ no_output:
 
 negotiation_error:
   {
+    gst_video_decoder_release_frame (GST_VIDEO_DECODER (ffmpegdec), out_frame);
     if (GST_PAD_IS_FLUSHING (GST_VIDEO_DECODER_SRC_PAD (ffmpegdec))) {
       *ret = GST_FLOW_FLUSHING;
       goto beach;
