@@ -64,6 +64,10 @@ enum
   PROP_LAST
 };
 
+#define VIDEO_CODEC_FRAME_DTS_OR_PTS(frame) (frame) != NULL ? \
+    (GST_CLOCK_TIME_IS_VALID ((frame)->dts) ? (frame)->dts : (frame)->pts) : \
+    GST_CLOCK_TIME_NONE
+
 /* A number of function prototypes are given so we can refer to them later. */
 static void gst_ffmpegviddec_base_init (GstFFMpegVidDecClass * klass);
 static void gst_ffmpegviddec_class_init (GstFFMpegVidDecClass * klass);
@@ -1694,7 +1698,7 @@ gst_ffmpegviddec_video_frame (GstFFMpegVidDec * ffmpegdec,
       ffmpegdec->requiring_keyframe = FALSE;
     else
       gst_video_decoder_report_decode_error (GST_VIDEO_DECODER_CAST (ffmpegdec),
-          out_frame->pts, GST_VIDEO_DECODER_BITSTREAM_FAULT);
+          VIDEO_CODEC_FRAME_DTS_OR_PTS (frame), GST_VIDEO_DECODER_BITSTREAM_FAULT);
   }
 
   /* FIXME: Ideally we would remap the buffer read-only now before pushing but
@@ -1771,6 +1775,8 @@ gst_ffmpegviddec_frame (GstFFMpegVidDec * ffmpegdec,
     GST_WARNING_OBJECT (ffmpegdec,
         "avdec_%s: decoding error (len: %d, have_data: %d)",
         oclass->in_plugin->name, len, *have_data);
+    gst_video_decoder_report_decode_error (GST_VIDEO_DECODER_CAST (ffmpegdec),
+        VIDEO_CODEC_FRAME_DTS_OR_PTS (frame), GST_VIDEO_DECODER_BITSTREAM_FAULT);
   }
 
   return len;
