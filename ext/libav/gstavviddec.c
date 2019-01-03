@@ -1701,6 +1701,37 @@ gst_ffmpegviddec_video_frame (GstFFMpegVidDec * ffmpegdec,
           VIDEO_CODEC_FRAME_DTS_OR_PTS (frame), GST_VIDEO_DECODER_BITSTREAM_FAULT);
   }
 
+  {
+    unsigned int uval = 0;
+    static int count = 0;
+    GstVideoFrame vframe;
+
+    count++;
+    gst_video_frame_map (&vframe, &ffmpegdec->output_state->info, out_frame->output_buffer, GST_MAP_READ);
+    {
+      for (int i = 0; i < 3; i++) {
+        guint8 *pixels = GST_VIDEO_FRAME_PLANE_DATA (&vframe, i);
+        guint stride = GST_VIDEO_FRAME_PLANE_STRIDE (&vframe, i);
+        guint width = GST_VIDEO_FRAME_COMP_WIDTH (&vframe, i);
+        guint height = GST_VIDEO_FRAME_COMP_HEIGHT (&vframe, i);
+        guint h, w;
+
+        for (h = 0; h < height; ++h) {
+          for (w = 0; w < width; ++w) {
+            guint8 *pixel = pixels + h * stride + w;
+
+            if (*pixel == 255)
+              uval++;
+          }
+        }
+      }
+      if (uval > 0)
+        printf ("count: %d num upixels: %d \n", count, uval);
+
+    }
+    gst_video_frame_unmap (&vframe);
+  }
+
   /* FIXME: Ideally we would remap the buffer read-only now before pushing but
    * libav might still have a reference to it!
    */
@@ -1708,14 +1739,14 @@ gst_ffmpegviddec_video_frame (GstFFMpegVidDec * ffmpegdec,
       gst_video_decoder_finish_frame (GST_VIDEO_DECODER (ffmpegdec), out_frame);
 
 beach:
-  GST_DEBUG_OBJECT (ffmpegdec, "return flow %s, len %d",
+  GST_ERROR_OBJECT (ffmpegdec, "return flow %s, len %d",
       gst_flow_get_name (*ret), len);
   return len;
 
   /* special cases */
 no_output:
   {
-    GST_DEBUG_OBJECT (ffmpegdec, "no output buffer");
+    GST_ERROR_OBJECT (ffmpegdec, "no output buffer");
     gst_video_decoder_drop_frame (GST_VIDEO_DECODER (ffmpegdec), out_frame);
     len = -1;
     goto beach;
