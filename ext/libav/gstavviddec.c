@@ -240,7 +240,8 @@ gst_ffmpegviddec_class_init (GstFFMpegVidDecClass * klass)
   g_object_class_install_property (gobject_class, PROP_REQUIRE_KEYFRAME,
       g_param_spec_boolean ("require-keyframe", "Require keyframe",
           "Whether the first frame is required to be a keyframe",
-          DEFAULT_REQUIRE_KEYFRAME, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+          DEFAULT_REQUIRE_KEYFRAME,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   caps = klass->in_plugin->capabilities;
   if (caps & (AV_CODEC_CAP_FRAME_THREADS | AV_CODEC_CAP_SLICE_THREADS)) {
@@ -1506,8 +1507,8 @@ gst_ffmpegviddec_video_frame (GstFFMpegVidDec * ffmpegdec,
   } else if (res < 0) {
     *ret = GST_FLOW_OK;
     GST_WARNING_OBJECT (ffmpegdec, "Legitimate decoding error");
-    gst_video_decoder_report_decode_error (GST_VIDEO_DECODER_CAST (ffmpegdec),
-        VIDEO_CODEC_FRAME_DTS_OR_PTS (frame), GST_VIDEO_DECODER_BITSTREAM_FAULT);
+    gst_video_decoder_request_sync_point (GST_VIDEO_DECODER_CAST (ffmpegdec),
+        frame, GST_VIDEO_DECODER_REQUEST_SYNC_POINT_DISCARD_INPUT);
     goto beach;
   }
 
@@ -1671,8 +1672,8 @@ gst_ffmpegviddec_video_frame (GstFFMpegVidDec * ffmpegdec,
     if (GST_VIDEO_CODEC_FRAME_IS_SYNC_POINT (out_frame))
       ffmpegdec->requiring_keyframe = FALSE;
     else
-      gst_video_decoder_report_decode_error (GST_VIDEO_DECODER_CAST (ffmpegdec),
-          VIDEO_CODEC_FRAME_DTS_OR_PTS (frame), GST_VIDEO_DECODER_BITSTREAM_FAULT);
+      gst_video_decoder_request_sync_point (GST_VIDEO_DECODER_CAST (ffmpegdec),
+          frame, GST_VIDEO_DECODER_REQUEST_SYNC_POINT_DISCARD_INPUT);
   }
 
   /* FIXME: Ideally we would remap the buffer read-only now before pushing but
@@ -1846,8 +1847,8 @@ gst_ffmpegviddec_handle_frame (GstVideoDecoder * decoder,
    */
   GST_VIDEO_DECODER_STREAM_UNLOCK (ffmpegdec);
   if (avcodec_send_packet (ffmpegdec->context, &packet) < 0) {
-    gst_video_decoder_report_decode_error (GST_VIDEO_DECODER_CAST (ffmpegdec),
-        VIDEO_CODEC_FRAME_DTS_OR_PTS (frame), GST_VIDEO_DECODER_BITSTREAM_FAULT);
+    gst_video_decoder_request_sync_point (GST_VIDEO_DECODER_CAST (ffmpegdec),
+        frame, GST_VIDEO_DECODER_REQUEST_SYNC_POINT_DISCARD_INPUT);
     GST_VIDEO_DECODER_STREAM_LOCK (ffmpegdec);
     goto send_packet_failed;
   }
