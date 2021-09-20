@@ -288,6 +288,7 @@ gst_ffmpegviddec_init (GstFFMpegVidDec * ffmpegdec)
       (ffmpegdec), TRUE);
 
   gst_video_decoder_set_needs_format (GST_VIDEO_DECODER (ffmpegdec), TRUE);
+  gst_video_decoder_set_needs_sync_point (GST_VIDEO_DECODER (ffmpegdec), TRUE);
 }
 
 static void
